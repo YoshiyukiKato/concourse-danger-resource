@@ -16,7 +16,7 @@ exit_with_error_because(){
 
 # Read inputs
 source=$1
-payload=$(mktemp istioctl-resource-request.XXXXXX)
+payload=$(mktemp danger-resource-request.XXXXXX)
 cat > $payload <&0
 
 # extract params
@@ -55,7 +55,7 @@ if [ $gemfile != 'null' ]; then
   bundle install --gemfile=$gemfile
 fi
 
-bundle exec danger \
+bundle exec danger local \
   --dangerfile=$dangerfile
 
 echo '{ "version": { "ref": "$BUILD_ID", "type": "danger" }, "metadata": [] }' >&3
