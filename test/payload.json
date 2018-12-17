@@ -1,0 +1,9 @@
+{
+  "params": {
+    "workdir": "./",
+    "dangerfile": "./Dangerfile",
+    "github": {
+      "api_token": "test_token"
+    }
+  }
+}
