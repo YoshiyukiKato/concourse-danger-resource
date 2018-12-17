@@ -1,2 +1,61 @@
 #!/bin/bash
-echo '{ "version": { "ref": "none", "message": "Hello World" }, "metadata": [{ "name": "message", "value": "Hello World" }] }'
+
+set -e
+set -o pipefail
+
+exec 3>&1 # make stdout available as fd 3 for the result
+exec 1>&2 # redirect all output to stderr for logging
+
+# source /opt/resource/common.sh
+
+# error handler
+exit_with_error_because(){
+  echo "Error: $1"
+  exit 1;
+}
+
+# Read inputs
+source=$1
+payload=$(mktemp istioctl-resource-request.XXXXXX)
+cat > $payload <&0
+
+# extract params
+## path to workdir
+workdir=$(jq -r '.params.workdir // "null"' < $payload)
+## path to dangerfile. If relative, set from workdir
+dangerfile=$(jq -r '.params.dangerfile // "null"' < $payload)
+## path to gemfile. If relative, set from workdir
+gemfile=$(jq -r '.params.gemfile // "null"' < $payload)
+## personal access token of github
+github_api_token=$(jq -r '.params.github.api_token // "null"' < $payload)
+## github host
+github_host=$(jq -r '.params.github.host // "github.com"' < $payload)
+## github api base url
+github_api_base_url=$(jq -r '.params.github.api_base_url // "https://api.github.com/"' < $payload)
+
+# set params to env var
+DANGER_GITHUB_API_TOKEN=github_api_token
+DANGER_GITHUB_HOST=github_host
+DANGER_GITHUB_API_BASE_URL=github_api_base_url
+
+# move to workdir
+if [ $workdir = 'null' ]; then
+  exit_with_error_because "param 'workdir' is not provided"
+else
+  cd $source/$workdir
+fi
+
+# validate if dangerfile param exist
+if [ $dangerfile = 'null' ]; then
+  exit_with_error_because "param 'dangerfile' is not provided"
+fi
+
+# bundle install if gemfile param provided
+if [ $gemfile != 'null' ]; then
+  bundle install --gemfile=$gemfile
+fi
+
+bundle exec danger \
+  --dangerfile=$dangerfile
+
+echo '{ "version": { "ref": "$BUILD_ID", "type": "danger" }, "metadata": [] }' >&3
